@@ -1,12 +1,16 @@
 [package]
 name = "flashcard"
 version = "0.1.0"
-authors = ["webe"]
+authors = ["WebeWizard <webewizard@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-rand = "0.6.1"
-serde = "1.0"
-serde_derive = "1.0"
-serde_yaml = "0.8"
-csv = "1"
+diesel = { version = "1.4.3", features = ["mysql","chrono", "r2d2"] }
+serde = { version = "1.0.103", features = ["derive"] }
+serde_json = "1.0.42"
+r2d2 = "0.8.7"
+
+webe_id = "0.1.1"
+
+[dev-dependencies]
+dotenv = "0.15.0"
