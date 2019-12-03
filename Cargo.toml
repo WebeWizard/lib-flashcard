@@ -11,6 +11,9 @@ serde_json = "1.0.42"
 r2d2 = "0.8.7"
 
 webe_id = "0.1.1"
+webe_auth = {path = "../lib-webe/webe_auth"}
+webe_web = {path = "../lib-webe/webe_web"}
+
 
 [dev-dependencies]
 dotenv = "0.15.0"

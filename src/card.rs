@@ -1,5 +1,9 @@
+use crate::schema::cards;
+
 use std::time::{SystemTime, SystemTimeError, UNIX_EPOCH};
 
+#[derive(AsChangeset, Identifiable, Insertable, Queryable, Debug)]
+#[table_name = "cards"]
 pub struct Card {
   id: u64,
   deck_id: u64,
