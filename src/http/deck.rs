@@ -11,10 +11,7 @@ use std::collections::HashMap;
 // CREATE DECK
 #[derive(Deserialize)]
 pub struct CreateDeckForm {
-  deck_id: u64,
-  deck_pos: u64,
-  question: String,
-  answer: String,
+  name: String,
 }
 
 pub struct CreateDeckResponder<'w> {
@@ -32,6 +29,7 @@ impl<'w> CreateDeckResponder<'w> {
 impl<'w> Responder for CreateDeckResponder<'w> {
   fn validate(&self, _request: &Request, _params: &HashMap<String, String>) -> ValidationResult {
     // make sure session header belongs to a valid session
+    // pass the session along to response builder
     unimplemented!()
   }
 
@@ -42,7 +40,7 @@ impl<'w> Responder for CreateDeckResponder<'w> {
     _validation: Validation,
   ) -> Result<Response, u16> {
     // get the session from the validation
-    // create the card with owner set to the account on the session
+    // create the deck with owner set to the account on the session
     unimplemented!()
   }
 }
@@ -50,9 +48,8 @@ impl<'w> Responder for CreateDeckResponder<'w> {
 // UPDATE DECK
 #[derive(Deserialize)]
 pub struct UpdateDeckForm {
-  deck_pos: u64,
-  question: String,
-  answer: String,
+  deck_id: u64,
+  name: String,
 }
 
 pub struct UpdateDeckResponder<'w> {
@@ -70,6 +67,7 @@ impl<'w> UpdateDeckResponder<'w> {
 impl<'w> Responder for UpdateDeckResponder<'w> {
   fn validate(&self, _request: &Request, _params: &HashMap<String, String>) -> ValidationResult {
     // make sure session header belongs to a valid session
+    // pass the session along
     unimplemented!()
   }
 
@@ -80,7 +78,7 @@ impl<'w> Responder for UpdateDeckResponder<'w> {
     _validation: Validation,
   ) -> Result<Response, u16> {
     // get the session from the validation
-    // make sure the account on the session matches the account on the card
+    // make sure the account on the session matches the account on the deck
     unimplemented!()
   }
 }

@@ -1,0 +1,36 @@
+CREATE TABLE accounts (
+  id BIGINT NOT NULL PRIMARY KEY,
+  account TINYTEXT NOT NULL,
+  salt TINYTEXT NOT NULL,
+  secret TINYTEXT NOT NULL,
+);
+
+CREATE TABLE users (
+  id BIGINT NOT NULL PRIMARY KEY,
+  account_id BIGINT NOT NULL,
+  name TINYTEXT NOT NULL,
+  email TINYTEXT NOT NULL,
+  FOREIGN KEY (account_id)
+    REFERENCES accounts(id)
+    ON DELETE CASCADE
+);
+
+CREATE TABLE decks (
+  id BIGINT NOT NULL PRIMARY KEY,
+  user_id BIGINT NOT NULL,
+  name TINYTEXT NOT NULL,
+  FOREIGN KEY (user_id)
+    REFERENCES users(id)
+    ON DELETE CASCADE
+);
+
+CREATE TABLE cards (
+  id BIGINT NOT NULL PRIMARY KEY,
+  deck_id BIGINT NOT NULL,
+  question TINYTEXT NOT NULL,
+  answer TINYTEXT NOT NULL,
+  INDEX deck_index (deck_id),
+  FOREIGN KEY (deck_id)
+    REFERENCES decks(id)
+    ON DELETE CASCADE
+);
