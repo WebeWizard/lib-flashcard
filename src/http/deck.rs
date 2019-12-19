@@ -1,47 +1,72 @@
+use crate::FlashManager;
 use serde::Deserialize;
-use webe_auth::WebeAuth;
+use webe_auth::session::Session;
 use webe_web::request::Request;
 use webe_web::responders::static_message::StaticResponder;
 use webe_web::responders::Responder;
 use webe_web::response::Response;
-use webe_web::validation::{Validation, ValidationResult};
+use webe_web::validation::Validation;
 
 use std::collections::HashMap;
 
 // CREATE DECK
 #[derive(Deserialize)]
 pub struct CreateDeckForm {
-  name: String,
+  pub name: String,
 }
 
-pub struct CreateDeckResponder<'w> {
-  auth_manager: &'w WebeAuth<'w>,
+pub struct CreateDeckResponder<'f> {
+  flash_manager: &'f FlashManager<'f>,
 }
 
-impl<'w> CreateDeckResponder<'w> {
-  pub fn new(auth_manager: &'w WebeAuth) -> CreateDeckResponder<'w> {
+impl<'f> CreateDeckResponder<'f> {
+  pub fn new(flash_manager: &'f FlashManager<'f>) -> CreateDeckResponder<'f> {
     CreateDeckResponder {
-      auth_manager: auth_manager,
+      flash_manager: flash_manager,
     }
   }
 }
 
-impl<'w> Responder for CreateDeckResponder<'w> {
-  fn validate(&self, _request: &Request, _params: &HashMap<String, String>) -> ValidationResult {
-    // make sure session header belongs to a valid session
-    // pass the session along to response builder
-    unimplemented!()
-  }
-
+impl<'f> Responder for CreateDeckResponder<'f> {
   fn build_response(
     &self,
     request: &mut Request,
-    _params: &HashMap<String, String>,
-    _validation: Validation,
+    params: &HashMap<String, String>,
+    validation: Validation,
   ) -> Result<Response, u16> {
-    // get the session from the validation
-    // create the deck with owner set to the account on the session
-    unimplemented!()
+    // Expecting session from an outer SecureResponder
+    match validation {
+      // TODO: maybe create some convenience function for unwrapping validation and parsing form from reader
+      Some(dyn_box) => match dyn_box.downcast::<Session>() {
+        Ok(session_box) => match &mut request.message_body {
+          Some(body_reader) => match serde_json::from_reader::<_, CreateDeckForm>(body_reader) {
+            Ok(form) => {
+              match self
+                .flash_manager
+                .create_deck(session_box.as_ref(), form.name)
+              {
+                Ok(deck) => match serde_json::to_string(&deck) {
+                  Ok(deck_text) => {
+                    let responder = StaticResponder::new(200, deck_text);
+                    return responder.build_response(request, params, None);
+                  }
+                  Err(error) => return Err(500),
+                },
+                Err(error) =>
+                // at the moment I think this is just systemtime error or db error
+                {
+                  return Err(500);
+                }
+              }
+            }
+            Err(error) => return Err(400), // bad request
+          },
+          None => return Err(400),
+        },
+        Err(Error) => return Err(500),
+      },
+      None => return Err(400),
+    }
   }
 }
 
@@ -52,33 +77,57 @@ pub struct UpdateDeckForm {
   name: String,
 }
 
-pub struct UpdateDeckResponder<'w> {
-  auth_manager: &'w WebeAuth<'w>,
+pub struct UpdateDeckResponder<'f> {
+  flash_manager: &'f FlashManager<'f>,
 }
 
-impl<'w> UpdateDeckResponder<'w> {
-  pub fn new(auth_manager: &'w WebeAuth) -> UpdateDeckResponder<'w> {
+impl<'f> UpdateDeckResponder<'f> {
+  pub fn new(flash_manager: &'f FlashManager) -> UpdateDeckResponder<'f> {
     UpdateDeckResponder {
-      auth_manager: auth_manager,
+      flash_manager: flash_manager,
     }
   }
 }
 
-impl<'w> Responder for UpdateDeckResponder<'w> {
-  fn validate(&self, _request: &Request, _params: &HashMap<String, String>) -> ValidationResult {
-    // make sure session header belongs to a valid session
-    // pass the session along
-    unimplemented!()
-  }
-
+impl<'f> Responder for UpdateDeckResponder<'f> {
   fn build_response(
     &self,
     request: &mut Request,
-    _params: &HashMap<String, String>,
-    _validation: Validation,
+    params: &HashMap<String, String>,
+    validation: Validation,
   ) -> Result<Response, u16> {
-    // get the session from the validation
-    // make sure the account on the session matches the account on the deck
-    unimplemented!()
+    // Expecting session from an outer SecureResponder
+    match validation {
+      Some(dyn_box) => match dyn_box.downcast::<Session>() {
+        Ok(session_box) => match &mut request.message_body {
+          Some(body_reader) => match serde_json::from_reader::<_, UpdateDeckForm>(body_reader) {
+            Ok(form) => {
+              match self.flash_manager.rename_deck(
+                session_box.as_ref(),
+                form.deck_id,
+                form.name.as_str(),
+              ) {
+                Ok(deck) => match serde_json::to_string(&deck) {
+                  Ok(deck_text) => {
+                    let responder = StaticResponder::new(200, deck_text);
+                    return responder.build_response(request, params, None);
+                  }
+                  Err(error) => return Err(500),
+                },
+                Err(error) =>
+                // at the moment I think this is just systemtime error or db error
+                {
+                  return Err(500);
+                }
+              }
+            }
+            Err(error) => return Err(400), // bad request
+          },
+          None => return Err(400),
+        },
+        Err(Error) => return Err(500),
+      },
+      None => return Err(400),
+    }
   }
 }

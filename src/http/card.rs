@@ -1,7 +1,6 @@
+use crate::{FlashError, FlashManager};
 use serde::Deserialize;
-use webe_auth::WebeAuth;
 use webe_web::request::Request;
-use webe_web::responders::static_message::StaticResponder;
 use webe_web::responders::Responder;
 use webe_web::response::Response;
 use webe_web::validation::{Validation, ValidationResult};
@@ -15,24 +14,19 @@ pub struct CreateCardForm {
   answer: String,
 }
 
-pub struct CreateCardResponder<'w> {
-  auth_manager: &'w WebeAuth<'w>,
+pub struct CreateCardResponder<'f> {
+  flash_manager: &'f FlashManager<'f>,
 }
 
-impl<'w> CreateCardResponder<'w> {
-  pub fn new(auth_manager: &'w WebeAuth) -> CreateCardResponder<'w> {
+impl<'f> CreateCardResponder<'f> {
+  pub fn new(flash_manager: &'f FlashManager) -> CreateCardResponder<'f> {
     CreateCardResponder {
-      auth_manager: auth_manager,
+      flash_manager: flash_manager,
     }
   }
 }
 
-impl<'w> Responder for CreateCardResponder<'w> {
-  fn validate(&self, _request: &Request, _params: &HashMap<String, String>) -> ValidationResult {
-    // make sure session header belongs to a valid session
-    unimplemented!()
-  }
-
+impl<'f> Responder for CreateCardResponder<'f> {
   fn build_response(
     &self,
     request: &mut Request,
@@ -40,7 +34,6 @@ impl<'w> Responder for CreateCardResponder<'w> {
     _validation: Validation,
   ) -> Result<Response, u16> {
     // get the session from the validation
-    // create the card with owner set to the account on the session
     unimplemented!()
   }
 }
@@ -52,24 +45,19 @@ pub struct UpdateCardForm {
   answer: Option<String>,
 }
 
-pub struct UpdateDeckResponder<'w> {
-  auth_manager: &'w WebeAuth<'w>,
+pub struct UpdateCardResponder<'f> {
+  flash_manager: &'f FlashManager<'f>,
 }
 
-impl<'w> UpdateDeckResponder<'w> {
-  pub fn new(auth_manager: &'w WebeAuth) -> UpdateDeckResponder<'w> {
-    UpdateDeckResponder {
-      auth_manager: auth_manager,
+impl<'f> UpdateCardResponder<'f> {
+  pub fn new(flash_manager: &'f FlashManager) -> UpdateCardResponder<'f> {
+    UpdateCardResponder {
+      flash_manager: flash_manager,
     }
   }
 }
 
-impl<'w> Responder for UpdateDeckResponder<'w> {
-  fn validate(&self, _request: &Request, _params: &HashMap<String, String>) -> ValidationResult {
-    // make sure session header belongs to a valid session
-    unimplemented!()
-  }
-
+impl<'f> Responder for UpdateCardResponder<'f> {
   fn build_response(
     &self,
     request: &mut Request,
@@ -78,6 +66,8 @@ impl<'w> Responder for UpdateDeckResponder<'w> {
   ) -> Result<Response, u16> {
     // get the session from the validation
     // make sure the account on the session matches the account on the deck
+    //  - logic for this should be handled in manager
+
     unimplemented!()
   }
 }

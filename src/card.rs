@@ -34,4 +34,14 @@ impl Card {
       last_updated: now,
     });
   }
+
+  pub fn update_position(&mut self, new_pos: u16) {
+    self.deck_pos = new_pos;
+  }
+  pub fn update_question(&mut self, new_question: String) {
+    self.question = new_question.to_owned();
+  }
+  pub fn update_answer(&mut self, new_answer: String) {
+    self.answer = new_answer.to_owned();
+  }
 }

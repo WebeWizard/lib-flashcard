@@ -1,16 +1,18 @@
 //use crate::card::Card;
 use crate::schema::decks;
 
+use serde::Serialize;
+
 use std::time::{SystemTime, SystemTimeError, UNIX_EPOCH};
 
 // used as the database record since we can't exclude fields from derives
 // see https://github.com/diesel-rs/diesel/issues/860
-#[derive(AsChangeset, Identifiable, Insertable, Queryable, Debug)]
+#[derive(Serialize, AsChangeset, Identifiable, Insertable, Queryable, Debug)]
 #[table_name = "decks"]
 pub struct Deck {
   id: u64,
   name: String,
-  owner_id: u64,
+  pub owner_id: u64,
   last_updated: u32,
 }
 
@@ -37,5 +39,9 @@ impl Deck {
       owner_id: owner_id,
       last_updated: now,
     });
+  }
+
+  pub fn rename(&mut self, name: &str) {
+    self.name = name.to_owned();
   }
 }
