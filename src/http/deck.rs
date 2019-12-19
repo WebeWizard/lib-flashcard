@@ -50,29 +50,28 @@ impl<'f> Responder for CreateDeckResponder<'f> {
                     let responder = StaticResponder::new(200, deck_text);
                     return responder.build_response(request, params, None);
                   }
-                  Err(error) => return Err(500),
+                  Err(_err) => return Err(500),
                 },
-                Err(error) =>
-                // at the moment I think this is just systemtime error or db error
-                {
+                Err(_err) => {
+                  // TODO: Handle session errors / database errors
                   return Err(500);
                 }
               }
             }
-            Err(error) => return Err(400), // bad request
+            Err(_err) => return Err(400), // bad request
           },
           None => return Err(400),
         },
-        Err(Error) => return Err(500),
+        Err(_err) => return Err(500),
       },
       None => return Err(400),
     }
   }
 }
 
-// UPDATE DECK
+// RENAME DECK
 #[derive(Deserialize)]
-pub struct UpdateDeckForm {
+pub struct RenameDeckForm {
   deck_id: u64,
   name: String,
 }
@@ -100,32 +99,28 @@ impl<'f> Responder for UpdateDeckResponder<'f> {
     match validation {
       Some(dyn_box) => match dyn_box.downcast::<Session>() {
         Ok(session_box) => match &mut request.message_body {
-          Some(body_reader) => match serde_json::from_reader::<_, UpdateDeckForm>(body_reader) {
+          Some(body_reader) => match serde_json::from_reader::<_, RenameDeckForm>(body_reader) {
             Ok(form) => {
               match self.flash_manager.rename_deck(
                 session_box.as_ref(),
                 form.deck_id,
                 form.name.as_str(),
               ) {
-                Ok(deck) => match serde_json::to_string(&deck) {
-                  Ok(deck_text) => {
-                    let responder = StaticResponder::new(200, deck_text);
-                    return responder.build_response(request, params, None);
-                  }
-                  Err(error) => return Err(500),
-                },
-                Err(error) =>
-                // at the moment I think this is just systemtime error or db error
-                {
+                Ok(()) => {
+                  let responder = StaticResponder::from_standard_code(200);
+                  return responder.build_response(request, params, None);
+                }
+                Err(_err) => {
+                  // TODO: Handle session errors / database errors                {
                   return Err(500);
                 }
               }
             }
-            Err(error) => return Err(400), // bad request
+            Err(_err) => return Err(400), // bad request
           },
           None => return Err(400),
         },
-        Err(Error) => return Err(500),
+        Err(_err) => return Err(500),
       },
       None => return Err(400),
     }

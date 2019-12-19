@@ -1,8 +1,10 @@
 use crate::schema::cards;
 
+use serde::Serialize;
+
 use std::time::{SystemTime, SystemTimeError, UNIX_EPOCH};
 
-#[derive(AsChangeset, Identifiable, Insertable, Queryable, Debug)]
+#[derive(Serialize, AsChangeset, Identifiable, Insertable, Queryable, Debug)]
 #[table_name = "cards"]
 pub struct Card {
   id: u64,

@@ -1,15 +1,18 @@
-use crate::{FlashError, FlashManager};
+use crate::FlashManager;
 use serde::Deserialize;
+use webe_auth::session::Session;
 use webe_web::request::Request;
+use webe_web::responders::static_message::StaticResponder;
 use webe_web::responders::Responder;
 use webe_web::response::Response;
-use webe_web::validation::{Validation, ValidationResult};
+use webe_web::validation::Validation;
 
 use std::collections::HashMap;
 
+#[derive(Deserialize)]
 pub struct CreateCardForm {
   deck_id: u64,
-  deck_pos: u64,
+  deck_pos: u16,
   question: String,
   answer: String,
 }
@@ -30,17 +33,51 @@ impl<'f> Responder for CreateCardResponder<'f> {
   fn build_response(
     &self,
     request: &mut Request,
-    _params: &HashMap<String, String>,
-    _validation: Validation,
+    params: &HashMap<String, String>,
+    validation: Validation,
   ) -> Result<Response, u16> {
-    // get the session from the validation
-    unimplemented!()
+    // Expecting session from an outer SecureResponder
+    match validation {
+      // TODO: maybe create some convenience function for unwrapping validation and parsing form from reader
+      Some(dyn_box) => match dyn_box.downcast::<Session>() {
+        Ok(session_box) => match &mut request.message_body {
+          Some(body_reader) => match serde_json::from_reader::<_, CreateCardForm>(body_reader) {
+            Ok(form) => {
+              match self.flash_manager.create_card(
+                session_box.as_ref(),
+                form.deck_id,
+                form.deck_pos,
+                form.question,
+                form.answer,
+              ) {
+                Ok(card) => match serde_json::to_string(&card) {
+                  Ok(card_text) => {
+                    let responder = StaticResponder::new(200, card_text);
+                    return responder.build_response(request, params, None);
+                  }
+                  Err(_err) => return Err(500),
+                },
+                Err(_err) => {
+                  // TODO: Handle session errors / database errors
+                  return Err(500);
+                }
+              }
+            }
+            Err(_err) => return Err(400), // bad request
+          },
+          None => return Err(400),
+        },
+        Err(_err) => return Err(500),
+      },
+      None => return Err(400),
+    }
   }
 }
 
+#[derive(Deserialize)]
 pub struct UpdateCardForm {
-  deck_id: u64,
-  deck_pos: Option<u64>,
+  card_id: u64,
+  deck_pos: Option<u16>,
   question: Option<String>,
   answer: Option<String>,
 }
@@ -61,13 +98,39 @@ impl<'f> Responder for UpdateCardResponder<'f> {
   fn build_response(
     &self,
     request: &mut Request,
-    _params: &HashMap<String, String>,
-    _validation: Validation,
+    params: &HashMap<String, String>,
+    validation: Validation,
   ) -> Result<Response, u16> {
-    // get the session from the validation
-    // make sure the account on the session matches the account on the deck
-    //  - logic for this should be handled in manager
-
-    unimplemented!()
+    // Expecting session from an outer SecureResponder
+    match validation {
+      Some(dyn_box) => match dyn_box.downcast::<Session>() {
+        Ok(session_box) => match &mut request.message_body {
+          Some(body_reader) => match serde_json::from_reader::<_, UpdateCardForm>(body_reader) {
+            Ok(form) => {
+              match self.flash_manager.update_card(
+                session_box.as_ref(),
+                form.card_id,
+                form.deck_pos,
+                form.question,
+                form.answer,
+              ) {
+                Ok(()) => {
+                  let responder = StaticResponder::from_standard_code(200);
+                  return responder.build_response(request, params, None);
+                }
+                Err(_err) => {
+                  // TODO: Handle session errors / database errors
+                  return Err(500);
+                }
+              }
+            }
+            Err(_err) => return Err(400), // bad request
+          },
+          None => return Err(400),
+        },
+        Err(_err) => return Err(500),
+      },
+      None => return Err(400),
+    }
   }
 }

@@ -118,8 +118,8 @@ impl<'f> FlashManager<'f> {
   // update card
   pub fn update_card(
     &self,
-    card_id: u64,
     session: &Session,
+    card_id: u64,
     deck_pos: Option<u16>,
     question: Option<String>,
     answer: Option<String>,
