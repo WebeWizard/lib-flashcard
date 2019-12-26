@@ -1,5 +1,5 @@
 [package]
-name = "flashcard"
+name = "lib_flashcard"
 version = "0.1.0"
 authors = ["WebeWizard <webewizard@gmail.com>"]
 edition = "2018"
