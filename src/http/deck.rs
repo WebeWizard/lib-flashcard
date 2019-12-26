@@ -9,6 +9,61 @@ use webe_web::validation::Validation;
 
 use std::collections::HashMap;
 
+// FETCH DECKS FOR ACCOUNT
+pub struct DecksResponder<'f> {
+  flash_manager: &'f FlashManager<'f>,
+}
+
+impl<'f> DecksResponder<'f> {
+  pub fn new(flash_manager: &'f FlashManager<'f>) -> DecksResponder<'f> {
+    DecksResponder {
+      flash_manager: flash_manager,
+    }
+  }
+}
+
+impl<'f> Responder for DecksResponder<'f> {
+  fn build_response(
+    &self,
+    request: &mut Request,
+    params: &HashMap<String, String>,
+    validation: Validation,
+  ) -> Result<Response, u16> {
+    // Expecting session from an outer SecureResponder
+    match validation {
+      // TODO: maybe create some convenience function for unwrapping validation and parsing form from reader
+      Some(dyn_box) => match dyn_box.downcast::<Session>() {
+        Ok(session_box) => match self
+          .flash_manager
+          .get_decks_for_session(session_box.as_ref())
+        {
+          Ok(decks) => match serde_json::to_string(&decks) {
+            Ok(deck_text) => {
+              let responder = StaticResponder::new(200, deck_text);
+              return responder.build_response(request, params, None);
+            }
+            Err(_err) => {
+              dbg!(_err);
+              return Err(500);
+            } // TODO: parse session error, not found error, etc
+          },
+          Err(_err) => {
+            println!("manager error");
+            dbg!(session_box);
+            return Err(500);
+          }
+        },
+        Err(_err) => {
+          println!("session error");
+          dbg!(_err);
+          return Err(500);
+        }
+      },
+      None => return Err(400),
+    }
+  }
+}
+
 // CREATE DECK
 #[derive(Deserialize)]
 pub struct CreateDeckForm {

@@ -53,6 +53,8 @@ pub trait DeckApi {
 
   fn find(&self, id: &u64) -> Result<Deck, DBApiError>;
 
+  fn find_decks_for_owner(&self, owner_id: &u64) -> Result<Vec<Deck>, DBApiError>;
+
   fn update(&self, deck: &Deck) -> Result<(), DBApiError>;
 
   fn delete(&self, id: &u64) -> Result<(), DBApiError>;
@@ -74,6 +76,13 @@ impl DeckApi for DBManager {
     let conn = self.get()?;
     let deck_info = decks.find(deck_info_id).first(&conn)?;
     return Ok(deck_info);
+  }
+
+  fn find_decks_for_owner(&self, owner: &u64) -> Result<Vec<Deck>, DBApiError> {
+    let conn = self.get()?;
+    let owner_decks = decks.filter(owner_id.eq(owner)).get_results(&conn)?;
+    // TODO: should result be sorted in any convenient way?
+    return Ok(owner_decks);
   }
 
   fn update(&self, deck_info: &Deck) -> Result<(), DBApiError> {

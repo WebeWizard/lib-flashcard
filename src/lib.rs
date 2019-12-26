@@ -154,8 +154,18 @@ impl<'f> FlashManager<'f> {
     }
   }
 
-  pub fn get_decks_for_owner(&self, owner_id: &u64) -> Result<Vec<Deck>, FlashError> {
-    unimplemented!()
+  pub fn get_decks_for_session(&self, session: &Session) -> Result<Vec<Deck>, FlashError> {
+    match session.is_expired() {
+      Ok(expired) => {
+        if !expired {
+          return db::DeckApi::find_decks_for_owner(&self.db_manager, &session.account_id)
+            .map_err(|e| FlashError::DBError(e));
+        } else {
+          return Err(FlashError::SessionTimeout);
+        }
+      }
+      Err(_err) => return Err(FlashError::SessionTimeout),
+    }
   }
 
   pub fn get_cards_for_deck(&self, deck_id: &u64) -> Result<Vec<Card>, FlashError> {
