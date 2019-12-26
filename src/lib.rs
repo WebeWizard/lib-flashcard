@@ -55,7 +55,7 @@ impl<'f> FlashManager<'f> {
   // create deck
   pub fn create_deck(&self, session: &Session, name: String) -> Result<Deck, FlashError> {
     // check session is not
-    if !session.is_expired().is_ok() {
+    if !session.is_expired() {
       let id = self.new_id()?;
       let deck = Deck::new(id, session.account_id, name)?;
       db::DeckApi::insert(&self.db_manager, &deck)?;
@@ -67,9 +67,13 @@ impl<'f> FlashManager<'f> {
 
   // update deck
   pub fn rename_deck(&self, session: &Session, deck_id: u64, name: &str) -> Result<(), FlashError> {
-    if !session.is_expired().is_ok() {
+    if !session.is_expired() {
       // find the existing deck in the db
+      // TODO: include session.account_id as a filter in the db query
       let existing = db::DeckApi::find(&self.db_manager, &deck_id)?;
+      if session.account_id != existing.owner_id {
+        return Err(FlashError::PermissionError);
+      }
       // provide db the modified object
       let mut updated = existing;
       updated.rename(name);
@@ -82,7 +86,12 @@ impl<'f> FlashManager<'f> {
 
   // delete deck
   pub fn delete_deck(&self, session: &Session, deck_id: u64) -> Result<(), FlashError> {
-    if !session.is_expired().is_ok() {
+    if !session.is_expired() {
+      // TODO: include session.account_id as a filter in the db query
+      let existing = db::DeckApi::find(&self.db_manager, &deck_id)?;
+      if session.account_id != existing.owner_id {
+        return Err(FlashError::PermissionError);
+      }
       db::DeckApi::delete(&self.db_manager, &deck_id).map_err(|e| FlashError::DBError(e))
     } else {
       return Err(FlashError::SessionTimeout);
@@ -98,7 +107,7 @@ impl<'f> FlashManager<'f> {
     question: String,
     answer: String,
   ) -> Result<Card, FlashError> {
-    if !session.is_expired().is_ok() {
+    if !session.is_expired() {
       // TODO: like most things, checking valid session, checking deck owner, etc
       // - can be done entirely in databse with one call instead of many api calls
       let deck = db::DeckApi::find(&self.db_manager, &deck_id)?;
@@ -124,7 +133,7 @@ impl<'f> FlashManager<'f> {
     question: Option<String>,
     answer: Option<String>,
   ) -> Result<(), FlashError> {
-    if !session.is_expired().is_ok() {
+    if !session.is_expired() {
       // find the existing deck in the db
       let existing = db::CardApi::find(&self.db_manager, &card_id)?;
       // provide db the modified object
@@ -147,7 +156,7 @@ impl<'f> FlashManager<'f> {
 
   // delete card
   pub fn delete_card(&self, session: &Session, card_id: u64) -> Result<(), FlashError> {
-    if !session.is_expired().is_ok() {
+    if !session.is_expired() {
       db::CardApi::delete(&self.db_manager, &card_id).map_err(|e| FlashError::DBError(e))
     } else {
       return Err(FlashError::SessionTimeout);
@@ -155,16 +164,11 @@ impl<'f> FlashManager<'f> {
   }
 
   pub fn get_decks_for_session(&self, session: &Session) -> Result<Vec<Deck>, FlashError> {
-    match session.is_expired() {
-      Ok(expired) => {
-        if !expired {
-          return db::DeckApi::find_decks_for_owner(&self.db_manager, &session.account_id)
-            .map_err(|e| FlashError::DBError(e));
-        } else {
-          return Err(FlashError::SessionTimeout);
-        }
-      }
-      Err(_err) => return Err(FlashError::SessionTimeout),
+    if !session.is_expired() {
+      return db::DeckApi::find_decks_for_owner(&self.db_manager, &session.account_id)
+        .map_err(|e| FlashError::DBError(e));
+    } else {
+      return Err(FlashError::SessionTimeout);
     }
   }
 
@@ -175,7 +179,4 @@ impl<'f> FlashManager<'f> {
   pub fn get_card(&self, card_id: &u64) -> Result<Card, FlashError> {
     unimplemented!()
   }
-
-  // TODO: maybe a get_all_decks_for_owner and get_all_cards_for_deck
-  // for a future offline sync.
 }

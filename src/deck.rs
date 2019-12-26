@@ -10,7 +10,7 @@ use std::time::{SystemTime, SystemTimeError, UNIX_EPOCH};
 #[derive(Serialize, AsChangeset, Identifiable, Insertable, Queryable, Debug)]
 #[table_name = "decks"]
 pub struct Deck {
-  id: u64,
+  pub id: u64,
   name: String,
   pub owner_id: u64,
   last_updated: u32,
