@@ -121,6 +121,10 @@ fn deck_tests() {
 
     // delete the deck with the valid account
     flash_manager.delete_deck(&valid, deck.id).unwrap();
+
+    // clean up the accounts
+    delete_account(&auth_manager, "valid");
+    delete_account(&auth_manager, "fake");
 }
 
 fn prepare_auth_manager(id_factory: &Mutex<WebeIDFactory>) -> WebeAuth {
@@ -203,4 +207,9 @@ fn create_and_verify_account(auth_manager: &WebeAuth, email: &str, pass: &str) {
             &account.verify_code.unwrap(),
         )
         .unwrap();
+}
+
+fn delete_account(auth_manager: &WebeAuth, email: &str) {
+    let account = auth_manager.find_by_email(&email.to_owned()).unwrap();
+    auth_manager.delete_account(account).unwrap();
 }

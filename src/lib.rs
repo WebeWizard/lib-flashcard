@@ -54,7 +54,7 @@ impl<'f> FlashManager<'f> {
 
   // create deck
   pub fn create_deck(&self, session: &Session, name: String) -> Result<Deck, FlashError> {
-    // check session is not
+    // TODO: validate name isn't empty
     if !session.is_expired() {
       let id = self.new_id()?;
       let deck = Deck::new(id, session.account_id, name)?;
@@ -67,6 +67,7 @@ impl<'f> FlashManager<'f> {
 
   // update deck
   pub fn rename_deck(&self, session: &Session, deck_id: u64, name: &str) -> Result<(), FlashError> {
+    // TODO: validate name isn't empty
     if !session.is_expired() {
       // find the existing deck in the db
       // TODO: include session.account_id as a filter in the db query
