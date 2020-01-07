@@ -87,7 +87,7 @@ impl DeckApi for DBManager {
 
   fn update(&self, deck_info: &Deck) -> Result<(), DBApiError> {
     let conn = self.get()?;
-    diesel::update(decks).set(deck_info).execute(&conn)?;
+    diesel::update(deck_info).set(deck_info).execute(&conn)?;
     return Ok(());
   }
 
@@ -129,7 +129,7 @@ impl CardApi for DBManager {
 
   fn update(&self, card: &Card) -> Result<(), DBApiError> {
     let conn = self.get()?;
-    diesel::update(cards).set(card).execute(&conn)?;
+    diesel::update(card).set(card).execute(&conn)?;
     return Ok(());
   }
 
