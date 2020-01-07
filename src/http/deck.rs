@@ -188,7 +188,6 @@ impl<'f> Responder for UpdateDeckResponder<'f> {
 pub struct DeleteDeckForm {
   #[serde(deserialize_with = "webe_auth::utility::deserialize_from_string")]
   deck_id: u64,
-  name: String,
 }
 
 pub struct DeleteDeckResponder<'f> {
