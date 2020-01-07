@@ -127,6 +127,7 @@ impl<'f> Responder for CreateDeckResponder<'f> {
 // RENAME DECK
 #[derive(Deserialize)]
 pub struct RenameDeckForm {
+  #[serde(deserialize_with = "webe_auth::utility::deserialize_from_string")]
   deck_id: u64,
   name: String,
 }
@@ -171,7 +172,10 @@ impl<'f> Responder for UpdateDeckResponder<'f> {
                 }
               }
             }
-            Err(_err) => return Err(400), // bad request
+            Err(_err) => {
+              println!("{:?}", _err);
+              return Err(400);
+            } // bad request
           },
           None => return Err(400),
         },
