@@ -107,6 +107,8 @@ pub trait CardApi {
 
   fn find(&self, card_id: &u64) -> Result<Card, DBApiError>;
 
+  fn find_cards_for_deck(&self, deck_id: &u64) -> Result<Vec<Card>, DBApiError>;
+
   fn update(&self, card: &Card) -> Result<(), DBApiError>;
 
   fn delete(&self, card_id: &u64) -> Result<(), DBApiError>;
@@ -125,6 +127,16 @@ impl CardApi for DBManager {
     let conn = self.get()?;
     let card = cards.find(card_id).first(&conn)?;
     return Ok(card);
+  }
+
+  fn find_cards_for_deck(&self, card_deck_id: &u64) -> Result<Vec<Card>, DBApiError> {
+    let conn = self.get()?;
+    let deck_cards = cards
+      .filter(deck_id.eq(card_deck_id))
+      .order(deck_pos.asc())
+      .get_results(&conn)?;
+    // TODO: should result be sorted in any convenient way? position?
+    return Ok(deck_cards);
   }
 
   fn update(&self, card: &Card) -> Result<(), DBApiError> {

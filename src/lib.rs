@@ -15,7 +15,7 @@ use webe_auth::session::Session;
 
 use card::Card;
 use db::DBApiError;
-use deck::Deck;
+use deck::{Deck, DeckDetails};
 
 use std::sync::Mutex;
 use std::time::SystemTimeError;
@@ -49,6 +49,16 @@ impl<'f> FlashManager<'f> {
       },
       // TODO: find a way to make the lock not poisonable
       _ => return Err(FlashError::OtherError), // mutex is poisoned
+    }
+  }
+
+  // get deck info
+  pub fn get_deck_info(&self, session: &Session, deck_id: &u64) -> Result<Deck, FlashError> {
+    if !session.is_expired() {
+      let deck = db::DeckApi::find(&self.db_manager, deck_id)?;
+      return Ok(deck);
+    } else {
+      return Err(FlashError::SessionTimeout);
     }
   }
 
@@ -173,8 +183,34 @@ impl<'f> FlashManager<'f> {
     }
   }
 
-  pub fn get_cards_for_deck(&self, deck_id: &u64) -> Result<Vec<Card>, FlashError> {
-    unimplemented!()
+  pub fn get_deck_details(
+    &self,
+    session: &Session,
+    deck_id: &u64,
+  ) -> Result<DeckDetails, FlashError> {
+    if !session.is_expired() {
+      let deckInfo = self.get_deck_info(session, deck_id)?;
+      let cards = self.get_cards_for_deck(session, deck_id)?; // TODO: turn into single sql statement using join
+      return Ok(DeckDetails {
+        info: deckInfo,
+        cards: cards,
+      });
+    } else {
+      return Err(FlashError::SessionTimeout);
+    }
+  }
+
+  pub fn get_cards_for_deck(
+    &self,
+    session: &Session,
+    deck_id: &u64,
+  ) -> Result<Vec<Card>, FlashError> {
+    if !session.is_expired() {
+      return db::CardApi::find_cards_for_deck(&self.db_manager, deck_id)
+        .map_err(|e| FlashError::DBError(e));
+    } else {
+      return Err(FlashError::SessionTimeout);
+    }
   }
 
   pub fn get_card(&self, card_id: &u64) -> Result<Card, FlashError> {

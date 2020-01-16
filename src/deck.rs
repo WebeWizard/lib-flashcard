@@ -1,4 +1,4 @@
-//use crate::card::Card;
+use crate::card::Card;
 use crate::schema::decks;
 
 use serde::Serialize;
@@ -15,6 +15,12 @@ pub struct Deck {
   name: String,
   pub owner_id: u64,
   last_updated: u32,
+}
+
+#[derive(Serialize)]
+pub struct DeckDetails {
+  pub info: Deck,
+  pub cards: Vec<Card>,
 }
 
 // // TODO: If we persist a deck in a cache or something,
