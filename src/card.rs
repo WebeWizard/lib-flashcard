@@ -7,7 +7,9 @@ use std::time::{SystemTime, SystemTimeError, UNIX_EPOCH};
 #[derive(Serialize, AsChangeset, Identifiable, Insertable, Queryable, Debug)]
 #[table_name = "cards"]
 pub struct Card {
+  #[serde(serialize_with = "webe_auth::utility::serialize_as_string")]
   id: u64,
+  #[serde(serialize_with = "webe_auth::utility::serialize_as_string")]
   deck_id: u64,
   deck_pos: u16,
   question: String,

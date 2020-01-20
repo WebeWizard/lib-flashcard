@@ -11,6 +11,7 @@ use std::collections::HashMap;
 
 #[derive(Deserialize)]
 pub struct CreateCardForm {
+  #[serde(deserialize_with = "webe_auth::utility::deserialize_from_string")]
   deck_id: u64,
   deck_pos: u16,
   question: String,
