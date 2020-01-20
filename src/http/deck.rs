@@ -75,12 +75,17 @@ impl<'f> Responder for DecksResponder<'f> {
 
 pub struct DeckDetailsResponder<'f> {
   flash_manager: &'f FlashManager<'f>,
+  deck_id_param: String,
 }
 
 impl<'f> DeckDetailsResponder<'f> {
-  pub fn new(flash_manager: &'f FlashManager<'f>) -> DeckDetailsResponder<'f> {
+  pub fn new(
+    flash_manager: &'f FlashManager<'f>,
+    deck_id_param: String,
+  ) -> DeckDetailsResponder<'f> {
     DeckDetailsResponder {
       flash_manager: flash_manager,
+      deck_id_param: deck_id_param,
     }
   }
 }
@@ -92,32 +97,38 @@ impl<'f> Responder for DeckDetailsResponder<'f> {
     params: &HashMap<String, String>,
     validation: Validation,
   ) -> Result<Response, u16> {
+    dbg!(&params);
     // Expecting session from an outer SecureResponder
     match validation {
       Some(dyn_box) => match dyn_box.downcast::<Session>() {
-        Ok(session_box) => match &mut request.message_body {
-          Some(body_reader) => match serde_json::from_reader::<_, DeckIdForm>(body_reader) {
-            Ok(form) => {
-              match self
-                .flash_manager
-                .get_deck_details(session_box.as_ref(), &form.deck_id)
-              {
-                Ok(details) => match serde_json::to_string(&details) {
-                  Ok(details_text) => {
-                    let responder = StaticResponder::new(200, details_text);
-                    return responder.build_response(request, params, None);
+        Ok(session_box) => match params.get(&self.deck_id_param) {
+          Some(deck_id_string) => {
+            match deck_id_string.parse::<u64>() {
+              Ok(deck_id) => {
+                match self
+                  .flash_manager
+                  .get_deck_details(session_box.as_ref(), &deck_id)
+                {
+                  Ok(details) => match serde_json::to_string(&details) {
+                    Ok(details_text) => {
+                      let responder = StaticResponder::new(200, details_text);
+                      return responder.build_response(request, params, None);
+                    }
+                    Err(_err) => return Err(500),
+                  },
+                  Err(_err) => {
+                    // TODO: Handle session errors / database errors                {
+                    return Err(500);
                   }
-                  Err(_err) => return Err(500),
-                },
-                Err(_err) => {
-                  // TODO: Handle session errors / database errors                {
-                  return Err(500);
                 }
               }
+              Err(_err) => return Err(400),
             }
-            Err(_err) => return Err(400), // bad request
-          },
-          None => return Err(400),
+          }
+          None => {
+            println!("made it here");
+            return Err(400);
+          }
         },
         Err(_err) => return Err(500),
       },
