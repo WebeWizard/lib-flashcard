@@ -9,6 +9,13 @@ use webe_web::validation::Validation;
 
 use std::collections::HashMap;
 
+// Form for targeting a single card
+#[derive(Deserialize)]
+pub struct CardIdForm {
+  #[serde(deserialize_with = "webe_auth::utility::deserialize_from_string")]
+  card_id: u64,
+}
+
 #[derive(Deserialize)]
 pub struct CreateCardForm {
   #[serde(deserialize_with = "webe_auth::utility::deserialize_from_string")]
@@ -77,7 +84,8 @@ impl<'f> Responder for CreateCardResponder<'f> {
 
 #[derive(Deserialize)]
 pub struct UpdateCardForm {
-  card_id: u64,
+  #[serde(deserialize_with = "webe_auth::utility::deserialize_from_string")]
+  id: u64,
   deck_pos: Option<u16>,
   question: Option<String>,
   answer: Option<String>,
@@ -110,7 +118,7 @@ impl<'f> Responder for UpdateCardResponder<'f> {
             Ok(form) => {
               match self.flash_manager.update_card(
                 session_box.as_ref(),
-                form.card_id,
+                form.id,
                 form.deck_pos,
                 form.question,
                 form.answer,
@@ -121,6 +129,57 @@ impl<'f> Responder for UpdateCardResponder<'f> {
                 }
                 Err(_err) => {
                   // TODO: Handle session errors / database errors
+                  return Err(500);
+                }
+              }
+            }
+            Err(_err) => return Err(400), // bad request
+          },
+          None => return Err(400),
+        },
+        Err(_err) => return Err(500),
+      },
+      None => return Err(400),
+    }
+  }
+}
+
+// DELETE CARD
+
+pub struct DeleteCardResponder<'f> {
+  flash_manager: &'f FlashManager<'f>,
+}
+
+impl<'f> DeleteCardResponder<'f> {
+  pub fn new(flash_manager: &'f FlashManager) -> DeleteCardResponder<'f> {
+    DeleteCardResponder {
+      flash_manager: flash_manager,
+    }
+  }
+}
+impl<'f> Responder for DeleteCardResponder<'f> {
+  fn build_response(
+    &self,
+    request: &mut Request,
+    params: &HashMap<String, String>,
+    validation: Validation,
+  ) -> Result<Response, u16> {
+    // Expecting session from an outer SecureResponder
+    match validation {
+      Some(dyn_box) => match dyn_box.downcast::<Session>() {
+        Ok(session_box) => match &mut request.message_body {
+          Some(body_reader) => match serde_json::from_reader::<_, CardIdForm>(body_reader) {
+            Ok(form) => {
+              match self
+                .flash_manager
+                .delete_card(session_box.as_ref(), form.card_id)
+              {
+                Ok(()) => {
+                  let responder = StaticResponder::from_standard_code(200);
+                  return responder.build_response(request, params, None);
+                }
+                Err(_err) => {
+                  // TODO: Handle session errors / database errors                {
                   return Err(500);
                 }
               }
