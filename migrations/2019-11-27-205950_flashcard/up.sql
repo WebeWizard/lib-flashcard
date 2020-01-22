@@ -17,3 +17,14 @@ CREATE TABLE cards (
     REFERENCES decks(id)
     ON DELETE CASCADE
 );
+
+CREATE TABLE cardscores (
+  account_id BIGINT UNSIGNED NOT NULL,
+  card_id BIGINT UNSIGNED NOT NULL,
+  score TINYINT UNSIGNED NOT NULL,
+  CONSTRAINT score_primary 
+   PRIMARY KEY (account_id, card_id),
+  FOREIGN KEY (card_id)
+    REFERENCES cards(id)
+    ON DELETE CASCADE
+);

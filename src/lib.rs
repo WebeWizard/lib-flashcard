@@ -8,6 +8,7 @@ extern crate webe_web;
 pub mod card;
 pub mod db;
 pub mod deck;
+pub mod game;
 pub mod http;
 pub mod schema;
 
@@ -16,6 +17,7 @@ use webe_auth::session::Session;
 use card::Card;
 use db::DBApiError;
 use deck::{Deck, DeckDetails};
+use game::CardScore;
 
 use std::sync::Mutex;
 use std::time::SystemTimeError;
@@ -120,7 +122,7 @@ impl<'f> FlashManager<'f> {
   ) -> Result<Card, FlashError> {
     if !session.is_expired() {
       // TODO: like most things, checking valid session, checking deck owner, etc
-      // - can be done entirely in databse with one call instead of many api calls
+      // - can be done entirely in database with one call instead of many api calls
       let deck = db::DeckApi::find(&self.db_manager, &deck_id)?;
       if deck.owner_id == session.account_id {
         let id = self.new_id()?;
@@ -215,5 +217,16 @@ impl<'f> FlashManager<'f> {
 
   pub fn get_card(&self, card_id: &u64) -> Result<Card, FlashError> {
     unimplemented!()
+  }
+
+  // update card score
+  pub fn update_score(&self, session: &Session, card_id: u64, score: u8) -> Result<(), FlashError> {
+    if !session.is_expired() {
+      let card_score = CardScore::new(session.account_id, card_id, score);
+      return db::GameApi::update_score(&self.db_manager, card_score)
+        .map_err(|e| FlashError::DBError(e));
+    } else {
+      return Err(FlashError::SessionTimeout);
+    }
   }
 }

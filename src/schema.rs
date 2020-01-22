@@ -10,6 +10,14 @@ table! {
 }
 
 table! {
+    cardscores (account_id, card_id) {
+        account_id -> Unsigned<Bigint>,
+        card_id -> Unsigned<Bigint>,
+        score -> Unsigned<Tinyint>,
+    }
+}
+
+table! {
     decks (id) {
         id -> Unsigned<Bigint>,
         name -> Varchar,
@@ -19,8 +27,10 @@ table! {
 }
 
 joinable!(cards -> decks (deck_id));
+joinable!(cardscores -> cards (card_id));
 
 allow_tables_to_appear_in_same_query!(
     cards,
+    cardscores,
     decks,
 );

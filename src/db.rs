@@ -3,12 +3,15 @@
 use diesel::prelude::*;
 use diesel::r2d2 as diesel_r2d2;
 use diesel::r2d2::{ConnectionManager, Pool};
+use diesel::result::DatabaseErrorKind as DBErrorKind;
 use diesel::result::Error as DieselError;
 
 use crate::card::Card;
 use crate::deck::Deck;
-use crate::schema::cards::dsl::{id as cardId, *};
-use crate::schema::decks::dsl::{id as deckId, *};
+use crate::game::CardScore;
+use crate::schema::cards::dsl as CardDSL;
+use crate::schema::cardscores::dsl as ScoreDSL;
+use crate::schema::decks::dsl as DeckDSL;
 
 #[derive(Debug)]
 pub enum DBApiError {
@@ -66,7 +69,10 @@ pub trait DeckApi {
 impl DeckApi for DBManager {
   fn insert(&self, deck_info: &Deck) -> Result<(), DBApiError> {
     let conn = self.get()?;
-    match diesel::insert_into(decks).values(deck_info).execute(&conn) {
+    match diesel::insert_into(DeckDSL::decks)
+      .values(deck_info)
+      .execute(&conn)
+    {
       Ok(_) => return Ok(()),
       Err(err) => return Err(DBApiError::OtherError(err)),
     }
@@ -74,13 +80,15 @@ impl DeckApi for DBManager {
 
   fn find(&self, deck_info_id: &u64) -> Result<Deck, DBApiError> {
     let conn = self.get()?;
-    let deck_info = decks.find(deck_info_id).first(&conn)?;
+    let deck_info = DeckDSL::decks.find(deck_info_id).first(&conn)?;
     return Ok(deck_info);
   }
 
   fn find_decks_for_owner(&self, owner: &u64) -> Result<Vec<Deck>, DBApiError> {
     let conn = self.get()?;
-    let owner_decks = decks.filter(owner_id.eq(owner)).get_results(&conn)?;
+    let owner_decks = DeckDSL::decks
+      .filter(DeckDSL::owner_id.eq(owner))
+      .get_results(&conn)?;
     // TODO: should result be sorted in any convenient way?
     return Ok(owner_decks);
   }
@@ -93,7 +101,8 @@ impl DeckApi for DBManager {
 
   fn delete(&self, deck_info_id: &u64) -> Result<(), DBApiError> {
     let conn = self.get()?;
-    let result = diesel::delete(decks.filter(deckId.eq(deck_info_id))).execute(&conn)?;
+    let result =
+      diesel::delete(DeckDSL::decks.filter(DeckDSL::id.eq(deck_info_id))).execute(&conn)?;
     if result == 1 {
       return Ok(());
     } else {
@@ -117,7 +126,10 @@ pub trait CardApi {
 impl CardApi for DBManager {
   fn insert(&self, card: &Card) -> Result<(), DBApiError> {
     let conn = self.get()?;
-    match diesel::insert_into(cards).values(card).execute(&conn) {
+    match diesel::insert_into(CardDSL::cards)
+      .values(card)
+      .execute(&conn)
+    {
       Ok(_) => return Ok(()),
       Err(err) => return Err(DBApiError::OtherError(err)),
     }
@@ -125,15 +137,15 @@ impl CardApi for DBManager {
 
   fn find(&self, card_id: &u64) -> Result<Card, DBApiError> {
     let conn = self.get()?;
-    let card = cards.find(card_id).first(&conn)?;
+    let card = CardDSL::cards.find(card_id).first(&conn)?;
     return Ok(card);
   }
 
   fn find_cards_for_deck(&self, card_deck_id: &u64) -> Result<Vec<Card>, DBApiError> {
     let conn = self.get()?;
-    let deck_cards = cards
-      .filter(deck_id.eq(card_deck_id))
-      .order(deck_pos.asc())
+    let deck_cards = CardDSL::cards
+      .filter(CardDSL::deck_id.eq(card_deck_id))
+      .order(CardDSL::deck_pos.asc())
       .get_results(&conn)?;
     // TODO: should result be sorted in any convenient way? position?
     return Ok(deck_cards);
@@ -147,11 +159,45 @@ impl CardApi for DBManager {
 
   fn delete(&self, card_id: &u64) -> Result<(), DBApiError> {
     let conn = self.get()?;
-    let result = diesel::delete(cards.filter(cardId.eq(card_id))).execute(&conn)?;
+    let result = diesel::delete(CardDSL::cards.filter(CardDSL::id.eq(card_id))).execute(&conn)?;
     if result == 1 {
       return Ok(());
     } else {
       return Err(DBApiError::NotFound);
     }
+  }
+}
+
+pub trait GameApi {
+  fn update_score(&self, score: CardScore) -> Result<(), DBApiError>;
+}
+
+impl GameApi for DBManager {
+  fn update_score(&self, score: CardScore) -> Result<(), DBApiError> {
+    let conn = self.get()?;
+    // NOTE: Mysql does not support Upsert
+    // so we must try insert first, then update on duplicate
+    match diesel::insert_into(ScoreDSL::cardscores)
+      .values(&score)
+      .execute(&conn)
+    {
+      Ok(_) => {}
+      Err(error) => match error {
+        DieselError::DatabaseError(db_error, _) => {
+          match db_error {
+            DBErrorKind::UniqueViolation => {
+              // already exists, time to try update
+              diesel::update(ScoreDSL::cardscores)
+                .set(&score)
+                .execute(&conn)?;
+              return Ok(());
+            }
+            _ => return Err(DBApiError::from(error)),
+          }
+        }
+        _ => return Err(DBApiError::from(error)),
+      },
+    }
+    return Ok(());
   }
 }
