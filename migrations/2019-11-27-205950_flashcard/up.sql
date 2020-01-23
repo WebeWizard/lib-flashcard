@@ -13,6 +13,7 @@ CREATE TABLE cards (
   question VARCHAR(50) NOT NULL,
   answer VARCHAR(50) NOT NULL,
   last_updated INT UNSIGNED NOT NULL, /* Seconds since UNIX EPOCH */
+  CONSTRAINT unique_pos UNIQUE (deck_id, deck_pos), /* only one card can occupy a position in a deck */
   FOREIGN KEY (deck_id)
     REFERENCES decks(id)
     ON DELETE CASCADE

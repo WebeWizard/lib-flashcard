@@ -14,7 +14,7 @@ use webe_id::WebeIDFactory;
 use std::sync::Mutex;
 
 #[test]
-fn deck_tests() {
+fn card_tests() {
   dotenv::dotenv().unwrap();
 
   // create the unique ID factory
@@ -44,8 +44,97 @@ fn deck_tests() {
     Ok(_) => {
       panic!("should not be able to create a card in a deck that doesn't belong to the deck owner")
     }
-    Err(_) => {}
+    Err(error) => match error {
+      FlashError::PermissionError => {}
+      _ => {
+        dbg!(error);
+        panic!("recieved an unexpected error")
+      }
+    },
   }
+
+  // verify that you can't add a card using expired session
+  match flash_manager.create_card(&expired, deck.id, 0, "Q".to_owned(), "A".to_owned()) {
+    Ok(_) => panic!("should not be able to create a card using expired session"),
+    Err(error) => match error {
+      FlashError::SessionTimeout => {}
+      _ => {
+        dbg!(error);
+        panic!("recieved an unexpected error")
+      }
+    },
+  }
+
+  // create a card using the valid account
+  let card = flash_manager
+    .create_card(&valid, deck.id, 0, "Q".to_owned(), "A".to_owned())
+    .unwrap();
+
+  // TODO: verify fetching card.  currently the api has no method to fetch a single card
+  // currently only fetched using DeckDetails which needs to be tested in Deck tests.
+
+  // verify you can't update a card using a fake account
+  match flash_manager.update_card(&fake, card.id, None, None, Some("B".to_owned())) {
+    Ok(_) => panic!("should not be able to update a card using fake account"),
+    Err(error) => match error {
+      FlashError::PermissionError => {}
+      _ => {
+        dbg!(error);
+        panic!("recieved an unexpected error")
+      }
+    },
+  }
+
+  // verify you can't update a card using an expired session
+  match flash_manager.update_card(&expired, card.id, None, None, Some("B".to_owned())) {
+    Ok(_) => panic!("should not be able to update a card using expired session"),
+    Err(error) => match error {
+      FlashError::SessionTimeout => {}
+      _ => {
+        dbg!(error);
+        panic!("recieved an unexpected error")
+      }
+    },
+  }
+
+  // update a card using the valid account
+  flash_manager
+    .update_card(&valid, card.id, None, None, Some("B".to_owned()))
+    .unwrap();
+
+  // verify you can't delete account using fake account
+  match flash_manager.delete_card(&fake, card.id) {
+    Ok(_) => panic!("should not be able to delete a card using fake account"),
+    Err(error) => match error {
+      FlashError::PermissionError => {}
+      _ => {
+        dbg!(error);
+        panic!("recieved an unexpected error")
+      }
+    },
+  }
+
+  // verify you can't delete account using expired session
+  match flash_manager.delete_card(&expired, card.id) {
+    Ok(_) => panic!("should not be able to delete a card using expired session"),
+    Err(error) => match error {
+      FlashError::SessionTimeout => {}
+      _ => {
+        dbg!(error);
+        panic!("recieved an unexpected error")
+      }
+    },
+  }
+
+  // delete the card with the valid account
+  flash_manager.delete_card(&valid, card.id).unwrap();
+
+  // delete the deck with the valid account
+  flash_manager.delete_deck(&valid, deck.id).unwrap();
+
+  // clean up the accounts
+  delete_account(&auth_manager, "valid");
+  delete_account(&auth_manager, "fake");
 }
 
 fn prepare_auth_manager(id_factory: &Mutex<WebeIDFactory>) -> WebeAuth {
@@ -91,6 +180,7 @@ fn prepare_flash_manager(id_factory: &Mutex<WebeIDFactory>) -> FlashManager {
 }
 
 fn prepare_sessions(auth_manager: &WebeAuth) -> (Session, Session, Session) {
+  println!("Preparing test sessions......");
   let valid_email = "valid";
   let fake_email = "fake";
   let pass = "test";
@@ -108,10 +198,12 @@ fn prepare_sessions(auth_manager: &WebeAuth) -> (Session, Session, Session) {
     .login(&valid_email.to_owned(), &pass.to_owned())
     .unwrap();
   expired_session.timeout = 0;
+  println!("Done");
   return (valid_session, fake_session, expired_session);
 }
 
 fn create_and_verify_account(auth_manager: &WebeAuth, email: &str, pass: &str) {
+  print!("Creating and Verifying test account: {}......", email);
   // if the email is in use, delete it (cleanup from previous test)
   if let Ok(existing) = auth_manager.find_by_email(&email.to_owned()) {
     auth_manager.delete_account(existing).unwrap();
@@ -128,6 +220,7 @@ fn create_and_verify_account(auth_manager: &WebeAuth, email: &str, pass: &str) {
       &account.verify_code.unwrap(),
     )
     .unwrap();
+  println!("Done");
 }
 
 fn delete_account(auth_manager: &WebeAuth, email: &str) {
