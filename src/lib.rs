@@ -167,6 +167,19 @@ impl<'f> FlashManager<'f> {
     }
   }
 
+  pub fn update_card_position(
+    &self,
+    session: &Session,
+    deck_id: u64,
+    card_id: u64,
+    orig_pos: u8,
+    new_pos: u8,
+  ) -> Result<(), FlashError> {
+    if !session.is_expired() {
+      //
+    }
+  }
+
   // delete card
   pub fn delete_card(&self, session: &Session, card_id: u64) -> Result<(), FlashError> {
     if !session.is_expired() {

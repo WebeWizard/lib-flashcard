@@ -18,6 +18,7 @@ pub enum DBApiError {
   OtherError(DieselError), // errors from interacting with database
   BadVerifyCode,
   PoolError(r2d2::Error),
+  NotAllowed, // caller is trying to do something wonky
   NotFound,
 }
 
@@ -120,6 +121,14 @@ pub trait CardApi {
 
   fn update(&self, card: &Card) -> Result<(), DBApiError>;
 
+  fn update_position(
+    &self,
+    deck_id: u64,
+    card_id: u64,
+    orig_pos: u16,
+    new_pos: u16,
+  ) -> Result<(), DBApiError>;
+
   fn delete(&self, card_id: &u64) -> Result<(), DBApiError>;
 }
 
@@ -154,6 +163,58 @@ impl CardApi for DBManager {
   fn update(&self, card: &Card) -> Result<(), DBApiError> {
     let conn = self.get()?;
     diesel::update(card).set(card).execute(&conn)?;
+    return Ok(());
+  }
+
+  fn update_position(
+    &self,
+    deck_id: u64,
+    card_id: u64,
+    orig_pos: u16,
+    new_pos: u16,
+  ) -> Result<(), DBApiError> {
+    // DO NOT ALLOW USER TO MOVE CARD TO RESERVED POSITION 0
+    if new_pos == 0 {
+      return Err(DBApiError::NotAllowed);
+    }
+    // ignore without change
+    if new_pos == orig_pos {
+      return Ok(());
+    }
+
+    let conn = self.get()?;
+
+    conn.transaction::<(), _, _>(|| {
+      // try to set the target card to position 0
+      // if not found, then either the card doesn't exist at the original position the user expects
+      // - and therefore should be an error
+      let result = diesel::update(
+        CardDSL::cards.filter(
+          CardDSL::deck_id
+            .eq(deck_id)
+            .and(CardDSL::id.eq(card_id))
+            .and(CardDSL::deck_pos.eq(orig_pos)),
+        ),
+      )
+      .set(CardDSL::deck_pos.eq(0))
+      .execute(&conn)?;
+      if result == 0 {
+        // no matching card
+        return Err(DieselError::NotFound);
+      } // NOTE:  result > 1 should be impossible based on card_id being primary key
+      let shift_dir = if new_pos < orig_pos { 1 } else { -1 };
+      diesel::update(CardDSL::cards.filter(CardDSL::deck_id.eq(deck_id).and(
+        CardDSL::deck_pos.le(if new_pos < orig_pos {
+          orig_pos
+        } else {
+          new_pos
+        }),
+      )))
+      .set(CardDSL::deck_pos.eq(CardDSL::deck_pos + 1))
+      .execute(&conn)?;
+      return Ok(());
+    });
+
     return Ok(());
   }
 
