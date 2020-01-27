@@ -5,7 +5,7 @@ authors = ["WebeWizard <webewizard@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-diesel = { version = "1.4.3", features = ["mysql","chrono", "r2d2"] }
+diesel = { version = "1.4.3", features = ["mysql", "chrono", "r2d2"] }
 serde = { version = "1.0.103", features = ["derive"] }
 serde_json = "1.0.42"
 r2d2 = "0.8.7"
@@ -13,6 +13,10 @@ r2d2 = "0.8.7"
 webe_id = "0.1.1"
 webe_auth = {path = "../lib-webe/webe_auth"}
 webe_web = {path = "../lib-webe/webe_web"}
+
+[replace]
+"diesel:1.4.3" = { path = "../diesel/diesel", features = ["mysql", "chrono", "r2d2"] }
+"diesel_derives:1.4.1" = { path = "../diesel/diesel_derives"}
 
 
 [dev-dependencies]

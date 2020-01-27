@@ -144,6 +144,72 @@ impl<'f> Responder for UpdateCardResponder<'f> {
   }
 }
 
+// UPDATE CARD POSITION
+
+#[derive(Deserialize)]
+pub struct UpdateCardPositionForm {
+  #[serde(deserialize_with = "webe_auth::utility::deserialize_from_string")]
+  deck_id: u64,
+  card_id: u64,
+  orig_pos: u16,
+  new_pos: u16,
+}
+
+pub struct UpdateCardPositionResponder<'f> {
+  flash_manager: &'f FlashManager<'f>,
+}
+
+impl<'f> UpdateCardPositionResponder<'f> {
+  pub fn new(flash_manager: &'f FlashManager) -> UpdateCardPositionResponder<'f> {
+    UpdateCardPositionResponder {
+      flash_manager: flash_manager,
+    }
+  }
+}
+
+impl<'f> Responder for UpdateCardPositionResponder<'f> {
+  fn build_response(
+    &self,
+    request: &mut Request,
+    params: &HashMap<String, String>,
+    validation: Validation,
+  ) -> Result<Response, u16> {
+    // Expecting session from an outer SecureResponder
+    match validation {
+      Some(dyn_box) => match dyn_box.downcast::<Session>() {
+        Ok(session_box) => match &mut request.message_body {
+          Some(body_reader) => {
+            match serde_json::from_reader::<_, UpdateCardPositionForm>(body_reader) {
+              Ok(form) => {
+                match self.flash_manager.update_card_position(
+                  session_box.as_ref(),
+                  form.card_id,
+                  form.deck_id,
+                  form.orig_pos,
+                  form.new_pos,
+                ) {
+                  Ok(()) => {
+                    let responder = StaticResponder::from_standard_code(200);
+                    return responder.build_response(request, params, None);
+                  }
+                  Err(_err) => {
+                    // TODO: Handle session errors / database errors
+                    return Err(500);
+                  }
+                }
+              }
+              Err(_err) => return Err(400), // bad request
+            }
+          }
+          None => return Err(400),
+        },
+        Err(_err) => return Err(500),
+      },
+      None => return Err(400),
+    }
+  }
+}
+
 // DELETE CARD
 
 pub struct DeleteCardResponder<'f> {

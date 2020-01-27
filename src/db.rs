@@ -186,7 +186,7 @@ impl CardApi for DBManager {
 
     conn.transaction::<(), _, _>(|| {
       // try to set the target card to position 0
-      // if not found, then either the card doesn't exist at the original position the user expects
+      // if not found, then the card doesn't exist at the original position the user expects
       // - and therefore should be an error
       let result = diesel::update(
         CardDSL::cards.filter(
@@ -202,18 +202,36 @@ impl CardApi for DBManager {
         // no matching card
         return Err(DieselError::NotFound);
       } // NOTE:  result > 1 should be impossible based on card_id being primary key
-      let shift_dir = if new_pos < orig_pos { 1 } else { -1 };
-      diesel::update(CardDSL::cards.filter(CardDSL::deck_id.eq(deck_id).and(
-        CardDSL::deck_pos.le(if new_pos < orig_pos {
-          orig_pos
-        } else {
-          new_pos
-        }),
-      )))
-      .set(CardDSL::deck_pos.eq(CardDSL::deck_pos + 1))
-      .execute(&conn)?;
+        // shift all cards between new and orig
+      if new_pos < orig_pos {
+        diesel::update(
+          CardDSL::cards.filter(
+            CardDSL::deck_id
+              .ne(deck_id)
+              .and(CardDSL::deck_pos.le(orig_pos))
+              .and(CardDSL::deck_pos.ge(new_pos)),
+          ),
+        )
+        .set(CardDSL::deck_pos.eq(CardDSL::deck_pos + 1))
+        .execute(&conn)?;
+      } else {
+        diesel::update(
+          CardDSL::cards.filter(
+            CardDSL::deck_id
+              .ne(deck_id)
+              .and(CardDSL::deck_pos.le(new_pos))
+              .and(CardDSL::deck_pos.ge(orig_pos)),
+          ),
+        )
+        .set(CardDSL::deck_pos.eq(CardDSL::deck_pos - 1))
+        .execute(&conn)?;
+      }
+      // move the card into final position
+      diesel::update(CardDSL::cards.filter(CardDSL::id.eq(card_id)))
+        .set(CardDSL::deck_pos.eq(new_pos))
+        .execute(&conn)?;
       return Ok(());
-    });
+    })?;
 
     return Ok(());
   }

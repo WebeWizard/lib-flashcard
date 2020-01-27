@@ -37,7 +37,7 @@ pub struct FlashManager<'f> {
 }
 
 impl From<SystemTimeError> for FlashError {
-  fn from(err: SystemTimeError) -> FlashError {
+  fn from(_err: SystemTimeError) -> FlashError {
     FlashError::SystemTimeError
   }
 }
@@ -147,8 +147,13 @@ impl<'f> FlashManager<'f> {
     answer: Option<String>,
   ) -> Result<(), FlashError> {
     if !session.is_expired() {
-      // find the existing deck in the db
+      // find the existing card in the db
       let existing = db::CardApi::find(&self.db_manager, &card_id)?;
+      // verify owner. TODO: can these two be made into one database call?
+      let deck = db::DeckApi::find(&self.db_manager, &existing.deck_id)?;
+      if deck.owner_id != session.account_id {
+        return Err(FlashError::PermissionError);
+      }
       // provide db the modified object
       let mut updated = existing;
       if let Some(pos) = deck_pos {
@@ -172,17 +177,32 @@ impl<'f> FlashManager<'f> {
     session: &Session,
     deck_id: u64,
     card_id: u64,
-    orig_pos: u8,
-    new_pos: u8,
+    orig_pos: u16,
+    new_pos: u16,
   ) -> Result<(), FlashError> {
     if !session.is_expired() {
-      //
+      // verify owner. TODO: can these two be made into one database call?
+      let deck = db::DeckApi::find(&self.db_manager, &deck_id)?;
+      if deck.owner_id != session.account_id {
+        return Err(FlashError::PermissionError);
+      }
+      db::CardApi::update_position(&self.db_manager, deck_id, card_id, orig_pos, new_pos)
+        .map_err(|e| FlashError::DBError(e))
+    } else {
+      return Err(FlashError::SessionTimeout);
     }
   }
 
   // delete card
   pub fn delete_card(&self, session: &Session, card_id: u64) -> Result<(), FlashError> {
     if !session.is_expired() {
+      // find the existing card in the db
+      let existing = db::CardApi::find(&self.db_manager, &card_id)?;
+      // verify owner. TODO: can these two be made into one database call?
+      let deck = db::DeckApi::find(&self.db_manager, &existing.deck_id)?;
+      if deck.owner_id != session.account_id {
+        return Err(FlashError::PermissionError);
+      }
       db::CardApi::delete(&self.db_manager, &card_id).map_err(|e| FlashError::DBError(e))
     } else {
       return Err(FlashError::SessionTimeout);
@@ -204,10 +224,14 @@ impl<'f> FlashManager<'f> {
     deck_id: &u64,
   ) -> Result<DeckDetails, FlashError> {
     if !session.is_expired() {
-      let deckInfo = self.get_deck_info(session, deck_id)?;
+      let deck_info = self.get_deck_info(session, deck_id)?;
+      // verify owner. TODO: can these two be made into one database call?
+      if deck_info.owner_id != session.account_id {
+        return Err(FlashError::PermissionError);
+      }
       let cards = self.get_cards_for_deck(session, deck_id)?; // TODO: turn into single sql statement using join
       return Ok(DeckDetails {
-        info: deckInfo,
+        info: deck_info,
         cards: cards,
       });
     } else {
@@ -221,6 +245,11 @@ impl<'f> FlashManager<'f> {
     deck_id: &u64,
   ) -> Result<Vec<Card>, FlashError> {
     if !session.is_expired() {
+      // verify owner. TODO: can these two be made into one database call?
+      let deck = db::DeckApi::find(&self.db_manager, &deck_id)?;
+      if deck.owner_id != session.account_id {
+        return Err(FlashError::PermissionError);
+      }
       return db::CardApi::find_cards_for_deck(&self.db_manager, deck_id)
         .map_err(|e| FlashError::DBError(e));
     } else {
@@ -228,7 +257,7 @@ impl<'f> FlashManager<'f> {
     }
   }
 
-  pub fn get_card(&self, card_id: &u64) -> Result<Card, FlashError> {
+  pub fn get_card(&self, _card_id: &u64) -> Result<Card, FlashError> {
     unimplemented!()
   }
 
