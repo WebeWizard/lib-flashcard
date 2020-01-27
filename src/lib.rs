@@ -137,12 +137,28 @@ impl<'f> FlashManager<'f> {
     }
   }
 
+  // fetch card
+  pub fn get_card(&self, session: &Session, card_id: u64) -> Result<Card, FlashError> {
+    if !session.is_expired() {
+      // find the existing card in the db
+      let existing = db::CardApi::find(&self.db_manager, &card_id)?;
+      // verify owner. TODO: can these two be made into one database call?
+      let deck = db::DeckApi::find(&self.db_manager, &existing.deck_id)?;
+      if deck.owner_id != session.account_id {
+        return Err(FlashError::PermissionError);
+      }
+      let card = db::CardApi::find(&self.db_manager, &card_id)?;
+      return Ok(card);
+    } else {
+      return Err(FlashError::SessionTimeout);
+    }
+  }
+
   // update card
   pub fn update_card(
     &self,
     session: &Session,
     card_id: u64,
-    deck_pos: Option<u16>,
     question: Option<String>,
     answer: Option<String>,
   ) -> Result<(), FlashError> {
@@ -156,9 +172,6 @@ impl<'f> FlashManager<'f> {
       }
       // provide db the modified object
       let mut updated = existing;
-      if let Some(pos) = deck_pos {
-        updated.update_position(pos);
-      }
       if let Some(question) = question {
         updated.update_question(question);
       }
@@ -255,10 +268,6 @@ impl<'f> FlashManager<'f> {
     } else {
       return Err(FlashError::SessionTimeout);
     }
-  }
-
-  pub fn get_card(&self, _card_id: &u64) -> Result<Card, FlashError> {
-    unimplemented!()
   }
 
   // update card score

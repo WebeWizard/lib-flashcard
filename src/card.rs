@@ -11,7 +11,7 @@ pub struct Card {
   pub id: u64,
   #[serde(serialize_with = "webe_auth::utility::serialize_as_string")]
   pub deck_id: u64,
-  deck_pos: u16,
+  pub deck_pos: u16,
   question: String,
   answer: String,
   last_updated: u32,

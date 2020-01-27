@@ -86,7 +86,6 @@ impl<'f> Responder for CreateCardResponder<'f> {
 pub struct UpdateCardForm {
   #[serde(deserialize_with = "webe_auth::utility::deserialize_from_string")]
   id: u64,
-  deck_pos: Option<u16>,
   question: Option<String>,
   answer: Option<String>,
 }
@@ -119,7 +118,6 @@ impl<'f> Responder for UpdateCardResponder<'f> {
               match self.flash_manager.update_card(
                 session_box.as_ref(),
                 form.id,
-                form.deck_pos,
                 form.question,
                 form.answer,
               ) {

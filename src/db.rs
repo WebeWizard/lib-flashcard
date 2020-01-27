@@ -184,7 +184,7 @@ impl CardApi for DBManager {
 
     let conn = self.get()?;
 
-    conn.transaction::<(), _, _>(|| {
+    conn.transaction::<(), DBApiError, _>(|| {
       // try to set the target card to position 0
       // if not found, then the card doesn't exist at the original position the user expects
       // - and therefore should be an error
@@ -200,14 +200,14 @@ impl CardApi for DBManager {
       .execute(&conn)?;
       if result == 0 {
         // no matching card
-        return Err(DieselError::NotFound);
+        return Err(DBApiError::OtherError(DieselError::NotFound));
       } // NOTE:  result > 1 should be impossible based on card_id being primary key
         // shift all cards between new and orig
       if new_pos < orig_pos {
         diesel::update(
           CardDSL::cards.filter(
             CardDSL::deck_id
-              .ne(deck_id)
+              .eq(deck_id)
               .and(CardDSL::deck_pos.le(orig_pos))
               .and(CardDSL::deck_pos.ge(new_pos)),
           ),
@@ -218,7 +218,7 @@ impl CardApi for DBManager {
         diesel::update(
           CardDSL::cards.filter(
             CardDSL::deck_id
-              .ne(deck_id)
+              .eq(deck_id)
               .and(CardDSL::deck_pos.le(new_pos))
               .and(CardDSL::deck_pos.ge(orig_pos)),
           ),
@@ -238,12 +238,24 @@ impl CardApi for DBManager {
 
   fn delete(&self, card_id: &u64) -> Result<(), DBApiError> {
     let conn = self.get()?;
-    let result = diesel::delete(CardDSL::cards.filter(CardDSL::id.eq(card_id))).execute(&conn)?;
-    if result == 1 {
+    conn.transaction::<(), DBApiError, _>(|| {
+      // get the card if exists
+      let card: Card = CardDSL::cards.find(card_id).first(&conn)?;
+      // delete the card
+      diesel::delete(CardDSL::cards.filter(CardDSL::id.eq(card_id))).execute(&conn)?;
+      // shift all of the following cards down 1 position
+      diesel::update(
+        CardDSL::cards.filter(
+          CardDSL::deck_id
+            .eq(card.deck_id)
+            .and(CardDSL::deck_pos.ge(card.deck_pos)),
+        ),
+      )
+      .set(CardDSL::deck_pos.eq(CardDSL::deck_pos - 1))
+      .execute(&conn)?;
       return Ok(());
-    } else {
-      return Err(DBApiError::NotFound);
-    }
+    })?;
+    return Ok(());
   }
 }
 

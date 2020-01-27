@@ -6,6 +6,7 @@ extern crate webe_id;
 use std::env;
 use std::time::{Duration, SystemTime};
 
+use lib_flashcard::db::DBApiError;
 use lib_flashcard::{FlashError, FlashManager};
 use webe_auth::session::Session;
 use webe_auth::{AuthManager, WebeAuth};
@@ -67,14 +68,19 @@ fn card_tests() {
 
   // create a card using the valid account
   let card = flash_manager
-    .create_card(&valid, deck.id, 0, "Q".to_owned(), "A".to_owned())
-    .unwrap();
+    .create_card(&valid, deck.id, 1, "Q".to_owned(), "A".to_owned())
+    .expect("failed to create first card");
+
+  // create second card for position testing later
+  let card2 = flash_manager
+    .create_card(&valid, deck.id, 2, "Q2".to_owned(), "A2".to_owned())
+    .expect("failed to create second card");
 
   // TODO: verify fetching card.  currently the api has no method to fetch a single card
   // currently only fetched using DeckDetails which needs to be tested in Deck tests.
 
   // verify you can't update a card using a fake account
-  match flash_manager.update_card(&fake, card.id, None, None, Some("B".to_owned())) {
+  match flash_manager.update_card(&fake, card.id, None, Some("B".to_owned())) {
     Ok(_) => panic!("should not be able to update a card using fake account"),
     Err(error) => match error {
       FlashError::PermissionError => {}
@@ -86,7 +92,7 @@ fn card_tests() {
   }
 
   // verify you can't update a card using an expired session
-  match flash_manager.update_card(&expired, card.id, None, None, Some("B".to_owned())) {
+  match flash_manager.update_card(&expired, card.id, None, Some("B".to_owned())) {
     Ok(_) => panic!("should not be able to update a card using expired session"),
     Err(error) => match error {
       FlashError::SessionTimeout => {}
@@ -99,8 +105,47 @@ fn card_tests() {
 
   // update a card using the valid account
   flash_manager
-    .update_card(&valid, card.id, None, None, Some("B".to_owned()))
+    .update_card(&valid, card.id, None, Some("B".to_owned()))
     .unwrap();
+
+  // verify you can't update position using a fake account
+  match flash_manager.update_card_position(&fake, deck.id, card.id, card.deck_pos, 2) {
+    Ok(_) => panic!("should not be able to update position using fake account"),
+    Err(error) => match error {
+      FlashError::PermissionError => {}
+      _ => {
+        dbg!(error);
+        panic!("recieved an unexpected error")
+      }
+    },
+  }
+
+  // verify you can't update position using an expired session
+  match flash_manager.update_card_position(&expired, deck.id, card.id, card.deck_pos, 2) {
+    Ok(_) => panic!("should not be able to update position using expired session"),
+    Err(error) => match error {
+      FlashError::SessionTimeout => {}
+      _ => {
+        dbg!(error);
+        panic!("recieved an unexpected error")
+      }
+    },
+  }
+
+  // verify user cannot force card into position 0
+  match flash_manager.update_card_position(&valid, deck.id, card.id, card.deck_pos, 0) {
+    Ok(_wut) => panic!("should not have been able to set card to position 0"),
+    Err(error) => match error {
+      FlashError::DBError(DBApiError::NotAllowed) => {} // expected, do nothing
+      _ => panic!(error),
+    },
+  }
+  // update position using the valid account
+  flash_manager
+    .update_card_position(&valid, deck.id, card.id, card.deck_pos, 2)
+    .expect("failed to update card position");
+  let updated_card2 = flash_manager.get_card(&valid, card2.id).unwrap();
+  assert_eq!(updated_card2.deck_pos, 1);
 
   // verify you can't delete account using fake account
   match flash_manager.delete_card(&fake, card.id) {
@@ -125,6 +170,13 @@ fn card_tests() {
       }
     },
   }
+
+  // delete the second card with the valid account (position 1)
+  flash_manager.delete_card(&valid, card2.id).unwrap();
+
+  // verify the card in pos 2 has moved to pos 1
+  let updated_card = flash_manager.get_card(&valid, card.id).unwrap();
+  assert_eq!(updated_card.deck_pos, 1);
 
   // delete the card with the valid account
   flash_manager.delete_card(&valid, card.id).unwrap();
