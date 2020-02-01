@@ -135,6 +135,10 @@ pub trait CardApi {
 impl CardApi for DBManager {
   fn insert(&self, card: &Card) -> Result<(), DBApiError> {
     let conn = self.get()?;
+    // DO NOT ALLOW USER TO MOVE CARD TO RESERVED POSITION 0
+    if card.deck_pos == 0 {
+      return Err(DBApiError::NotAllowed);
+    }
     match diesel::insert_into(CardDSL::cards)
       .values(card)
       .execute(&conn)
