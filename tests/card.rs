@@ -109,7 +109,7 @@ fn card_tests() {
     .unwrap();
 
   // verify you can't update position using a fake account
-  match flash_manager.update_card_position(&fake, deck.id, card.id, card.deck_pos, 2) {
+  match flash_manager.update_card_position(&fake, card.id, deck.id, card.deck_pos, 2) {
     Ok(_) => panic!("should not be able to update position using fake account"),
     Err(error) => match error {
       FlashError::PermissionError => {}
@@ -121,7 +121,7 @@ fn card_tests() {
   }
 
   // verify you can't update position using an expired session
-  match flash_manager.update_card_position(&expired, deck.id, card.id, card.deck_pos, 2) {
+  match flash_manager.update_card_position(&expired, card.id, deck.id, card.deck_pos, 2) {
     Ok(_) => panic!("should not be able to update position using expired session"),
     Err(error) => match error {
       FlashError::SessionTimeout => {}
@@ -133,7 +133,7 @@ fn card_tests() {
   }
 
   // verify user cannot force card into position 0
-  match flash_manager.update_card_position(&valid, deck.id, card.id, card.deck_pos, 0) {
+  match flash_manager.update_card_position(&valid, card.id, deck.id, card.deck_pos, 0) {
     Ok(_wut) => panic!("should not have been able to set card to position 0"),
     Err(error) => match error {
       FlashError::DBError(DBApiError::NotAllowed) => {} // expected, do nothing
@@ -142,7 +142,7 @@ fn card_tests() {
   }
   // update position using the valid account
   flash_manager
-    .update_card_position(&valid, deck.id, card.id, card.deck_pos, 2)
+    .update_card_position(&valid, card.id, deck.id, card.deck_pos, 2)
     .expect("failed to update card position");
   let updated_card2 = flash_manager.get_card(&valid, card2.id).unwrap();
   assert_eq!(updated_card2.deck_pos, 1);
