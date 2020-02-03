@@ -188,8 +188,8 @@ impl<'f> FlashManager<'f> {
   pub fn update_card_position(
     &self,
     session: &Session,
-    deck_id: u64,
     card_id: u64,
+    deck_id: u64,
     orig_pos: u16,
     new_pos: u16,
   ) -> Result<(), FlashError> {
@@ -199,7 +199,7 @@ impl<'f> FlashManager<'f> {
       if deck.owner_id != session.account_id {
         return Err(FlashError::PermissionError);
       }
-      db::CardApi::update_position(&self.db_manager, deck_id, card_id, orig_pos, new_pos)
+      db::CardApi::update_position(&self.db_manager, card_id, deck_id, orig_pos, new_pos)
         .map_err(|e| FlashError::DBError(e))
     } else {
       return Err(FlashError::SessionTimeout);
