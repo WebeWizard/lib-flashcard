@@ -9,6 +9,8 @@ use diesel::result::Error as DieselError;
 use crate::card::Card;
 use crate::deck::Deck;
 use crate::game::CardScore;
+use crate::schema::card_pos_asc::dsl as CardPosAscDSL;
+use crate::schema::card_pos_desc::dsl as CardPosDescDSL;
 use crate::schema::cards::dsl as CardDSL;
 use crate::schema::cardscores::dsl as ScoreDSL;
 use crate::schema::decks::dsl as DeckDSL;
@@ -123,8 +125,8 @@ pub trait CardApi {
 
   fn update_position(
     &self,
-    deck_id: u64,
     card_id: u64,
+    deck_id: u64,
     orig_pos: u16,
     new_pos: u16,
   ) -> Result<(), DBApiError>;
@@ -172,8 +174,8 @@ impl CardApi for DBManager {
 
   fn update_position(
     &self,
-    deck_id: u64,
     card_id: u64,
+    deck_id: u64,
     orig_pos: u16,
     new_pos: u16,
   ) -> Result<(), DBApiError> {
@@ -209,25 +211,25 @@ impl CardApi for DBManager {
         // shift all cards between new and orig
       if new_pos < orig_pos {
         diesel::update(
-          CardDSL::cards.filter(
-            CardDSL::deck_id
+          CardPosDescDSL::card_pos_desc.filter(
+            CardPosDescDSL::deck_id
               .eq(deck_id)
-              .and(CardDSL::deck_pos.le(orig_pos))
-              .and(CardDSL::deck_pos.ge(new_pos)),
+              .and(CardPosDescDSL::deck_pos.le(orig_pos))
+              .and(CardPosDescDSL::deck_pos.ge(new_pos)),
           ),
         )
-        .set(CardDSL::deck_pos.eq(CardDSL::deck_pos + 1))
+        .set(CardPosDescDSL::deck_pos.eq(CardPosDescDSL::deck_pos + 1))
         .execute(&conn)?;
       } else {
         diesel::update(
-          CardDSL::cards.filter(
-            CardDSL::deck_id
+          CardPosAscDSL::card_pos_asc.filter(
+            CardPosAscDSL::deck_id
               .eq(deck_id)
-              .and(CardDSL::deck_pos.le(new_pos))
-              .and(CardDSL::deck_pos.ge(orig_pos)),
+              .and(CardPosAscDSL::deck_pos.le(new_pos))
+              .and(CardPosAscDSL::deck_pos.ge(orig_pos)),
           ),
         )
-        .set(CardDSL::deck_pos.eq(CardDSL::deck_pos - 1))
+        .set(CardPosAscDSL::deck_pos.eq(CardPosAscDSL::deck_pos - 1))
         .execute(&conn)?;
       }
       // move the card into final position

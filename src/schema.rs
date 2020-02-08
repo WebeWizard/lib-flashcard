@@ -19,6 +19,22 @@ table! {
     }
 }
 
+// VIEWS TO HELP KEEP POSITIONS IN ORDER, since you can't 'order by' during a sql update
+table! {
+    card_pos_asc (id) {
+        id -> Unsigned<Bigint>,
+        deck_id -> Unsigned<Bigint>,
+        deck_pos -> Unsigned<Smallint>,
+    }
+}
+table! {
+    card_pos_desc (id) {
+        id -> Unsigned<Bigint>,
+        deck_id -> Unsigned<Bigint>,
+        deck_pos -> Unsigned<Smallint>,
+    }
+}
+
 table! {
     cardscores (account_id, card_id) {
         account_id -> Unsigned<Bigint>,
@@ -231,34 +247,4 @@ joinable!(likes -> comments (comment_id));
 joinable!(likes -> users (user_id));
 joinable!(posts -> users (user_id));
 
-allow_tables_to_appear_in_same_query!(
-    all_the_blobs,
-    cards,
-    cardscores,
-    comments,
-    composite_fk,
-    cyclic_fk_1,
-    cyclic_fk_2,
-    decks,
-    fk_doesnt_reference_pk,
-    fk_inits,
-    fk_tests,
-    followings,
-    likes,
-    multiple_fks_to_same_table,
-    nullable_doubles,
-    nullable_table,
-    numbers,
-    points,
-    posts,
-    precision_numbers,
-    self_referential_fk,
-    special_comments,
-    special_posts,
-    trees,
-    unsigned_table,
-    users,
-    users_select_for_update,
-    users_with_name_pk,
-    with_keywords,
-);
+allow_tables_to_appear_in_same_query!(cards, cardscores, decks,);

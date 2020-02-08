@@ -148,7 +148,8 @@ impl<'f> Responder for UpdateCardResponder<'f> {
 pub struct UpdateCardPositionForm {
   #[serde(deserialize_with = "webe_auth::utility::deserialize_from_string")]
   deck_id: u64,
-  card_id: u64,
+  #[serde(deserialize_with = "webe_auth::utility::deserialize_from_string")]
+  id: u64,
   orig_pos: u16,
   new_pos: u16,
 }
@@ -181,7 +182,7 @@ impl<'f> Responder for UpdateCardPositionResponder<'f> {
               Ok(form) => {
                 match self.flash_manager.update_card_position(
                   session_box.as_ref(),
-                  form.card_id,
+                  form.id,
                   form.deck_id,
                   form.orig_pos,
                   form.new_pos,
@@ -191,12 +192,13 @@ impl<'f> Responder for UpdateCardPositionResponder<'f> {
                     return responder.build_response(request, params, None);
                   }
                   Err(_err) => {
+                    dbg!(_err);
                     // TODO: Handle session errors / database errors
                     return Err(500);
                   }
                 }
               }
-              Err(_err) => return Err(400), // bad request
+              Err(_err) => return Err(400),
             }
           }
           None => return Err(400),

@@ -19,6 +19,14 @@ CREATE TABLE cards (
     ON DELETE CASCADE
 );
 
+/* VIEWS TO HELP KEEP POSITIONS IN ORDER, since you can't 'order by' during a sql update */
+CREATE VIEW card_pos_asc AS (
+  SELECT id, deck_id, deck_pos FROM cards ORDER BY deck_id DESC, deck_pos
+);
+CREATE VIEW card_pos_desc AS (
+  SELECT id, deck_id, deck_pos FROM cards ORDER BY deck_id DESC, deck_pos DESC
+);
+
 CREATE TABLE cardscores (
   account_id BIGINT UNSIGNED NOT NULL,
   card_id BIGINT UNSIGNED NOT NULL,
