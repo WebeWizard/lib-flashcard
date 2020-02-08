@@ -270,11 +270,32 @@ impl<'f> FlashManager<'f> {
     }
   }
 
-  // update card score
   pub fn update_score(&self, session: &Session, card_id: u64, score: u8) -> Result<(), FlashError> {
     if !session.is_expired() {
       let card_score = CardScore::new(session.account_id, card_id, score);
+      let card = db::CardApi::find(&self.db_manager, &card_id)?;
+      let deck = db::DeckApi::find(&self.db_manager, &card.deck_id)?;
+      if deck.owner_id != session.account_id {
+        return Err(FlashError::PermissionError);
+      }
       return db::GameApi::update_score(&self.db_manager, card_score)
+        .map_err(|e| FlashError::DBError(e));
+    } else {
+      return Err(FlashError::SessionTimeout);
+    }
+  }
+
+  pub fn get_deck_scores(
+    &self,
+    session: &Session,
+    deck_id: u64,
+  ) -> Result<Vec<CardScore>, FlashError> {
+    if !session.is_expired() {
+      let deck = db::DeckApi::find(&self.db_manager, &deck_id)?;
+      if deck.owner_id != session.account_id {
+        return Err(FlashError::PermissionError);
+      }
+      return db::GameApi::get_deck_scores(&self.db_manager, deck_id)
         .map_err(|e| FlashError::DBError(e));
     } else {
       return Err(FlashError::SessionTimeout);

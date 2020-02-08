@@ -13,7 +13,7 @@ use std::collections::HashMap;
 #[derive(Deserialize)]
 pub struct DeckIdForm {
   #[serde(deserialize_with = "webe_auth::utility::deserialize_from_string")]
-  deck_id: u64,
+  pub deck_id: u64,
 }
 
 // FETCH DECKS FOR ACCOUNT

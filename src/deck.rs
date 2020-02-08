@@ -23,17 +23,6 @@ pub struct DeckDetails {
   pub cards: Vec<Card>,
 }
 
-// // TODO: If we persist a deck in a cache or something,
-// // it may be useful to keep cards in struct
-// #[derive(Debug)]
-// pub struct Deck {
-//   id: u64,
-//   name: String,
-//   owner_id: u64,
-//   last_updated: u32,
-//   cards: Vec<Card>,
-// }
-
 impl Deck {
   pub fn new(id: u64, owner_id: u64, name: String) -> Result<Deck, SystemTimeError> {
     let now: u32 = match SystemTime::now().duration_since(UNIX_EPOCH) {
