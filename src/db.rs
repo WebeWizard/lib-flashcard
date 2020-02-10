@@ -267,7 +267,7 @@ impl CardApi for DBManager {
 
 pub trait GameApi {
   fn update_score(&self, score: CardScore) -> Result<(), DBApiError>;
-  fn get_deck_scores(&self, deck_id: u64) -> Result<Vec<CardScore>, DBApiError>;
+  fn get_deck_scores(&self, deck_id: u64, account_id: u64) -> Result<Vec<CardScore>, DBApiError>;
 }
 
 impl GameApi for DBManager {
@@ -299,12 +299,16 @@ impl GameApi for DBManager {
     return Ok(());
   }
 
-  fn get_deck_scores(&self, deck_id: u64) -> Result<Vec<CardScore>, DBApiError> {
+  fn get_deck_scores(&self, deck_id: u64, account_id: u64) -> Result<Vec<CardScore>, DBApiError> {
     let conn = self.get()?;
     let deck_scores = ScoreDSL::cardscores
       .inner_join(CardDSL::cards)
-      .select((ScoreDSL::card_id, ScoreDSL::account_id, ScoreDSL::score))
-      .filter(CardDSL::deck_id.eq(deck_id))
+      .select((ScoreDSL::account_id, ScoreDSL::card_id, ScoreDSL::score))
+      .filter(
+        CardDSL::deck_id
+          .eq(deck_id)
+          .and(ScoreDSL::account_id.eq(account_id)),
+      )
       .load::<CardScore>(&conn)?;
     // TODO: should result be sorted in any convenient way? position?
     return Ok(deck_scores);

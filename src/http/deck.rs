@@ -97,7 +97,6 @@ impl<'f> Responder for DeckDetailsResponder<'f> {
     params: &HashMap<String, String>,
     validation: Validation,
   ) -> Result<Response, u16> {
-    dbg!(&params);
     // Expecting session from an outer SecureResponder
     match validation {
       Some(dyn_box) => match dyn_box.downcast::<Session>() {

@@ -295,7 +295,7 @@ impl<'f> FlashManager<'f> {
       if deck.owner_id != session.account_id {
         return Err(FlashError::PermissionError);
       }
-      return db::GameApi::get_deck_scores(&self.db_manager, deck_id)
+      return db::GameApi::get_deck_scores(&self.db_manager, deck_id, session.account_id)
         .map_err(|e| FlashError::DBError(e));
     } else {
       return Err(FlashError::SessionTimeout);
