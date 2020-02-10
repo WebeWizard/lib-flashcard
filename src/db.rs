@@ -286,6 +286,7 @@ impl GameApi for DBManager {
             DBErrorKind::UniqueViolation => {
               // already exists, time to try update
               diesel::update(ScoreDSL::cardscores)
+                .filter(ScoreDSL::card_id.eq(score.card_id))
                 .set(&score)
                 .execute(&conn)?;
               return Ok(());

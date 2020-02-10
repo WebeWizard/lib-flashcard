@@ -10,7 +10,7 @@ pub struct CardScore {
   #[serde(serialize_with = "webe_auth::utility::serialize_as_string")]
   account_id: u64,
   #[serde(serialize_with = "webe_auth::utility::serialize_as_string")]
-  card_id: u64,
+  pub card_id: u64,
   pub score: u8, // TODO: include timestamp to see if user improves over time?
 }
 
