@@ -15,8 +15,8 @@ webe_auth = {path = "../lib-webe/webe_auth"}
 webe_web = {path = "../lib-webe/webe_web"}
 
 [replace]
-"diesel:1.4.3" = { path = "../diesel/diesel", features = ["mysql", "chrono", "r2d2"] }
-"diesel_derives:1.4.1" = { path = "../diesel/diesel_derives"}
+"diesel:1.4.3" = { git = "https://github.com/diesel-rs/diesel", features = ["mysql", "chrono", "r2d2"] }
+"diesel_derives:1.4.1" = { git = "https://github.com/diesel-rs/diesel"}
 
 
 [dev-dependencies]
