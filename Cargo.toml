@@ -11,12 +11,12 @@ serde_json = "1.0.42"
 r2d2 = "0.8.7"
 
 webe_id = "0.1.1"
-webe_auth = {path = "../lib-webe/webe_auth"}
-webe_web = {path = "../lib-webe/webe_web"}
+webe_auth = { git = "ssh://git@github.com/WebeWizard/lib-webe.git" }
+webe_web = { git = "ssh://git@github.com/WebeWizard/lib-webe.git"}
 
 [replace]
 "diesel:1.4.3" = { git = "https://github.com/diesel-rs/diesel", features = ["mysql", "chrono", "r2d2"] }
-"diesel_derives:1.4.1" = { git = "https://github.com/diesel-rs/diesel"}
+"diesel_derives:1.4.1" = { git = "https://github.com/diesel-rs/diesel" }
 
 
 [dev-dependencies]
