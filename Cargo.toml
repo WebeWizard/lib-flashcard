@@ -2,22 +2,18 @@
 name = "lib_flashcard"
 version = "0.1.0"
 authors = ["WebeWizard <webewizard@gmail.com>"]
-edition = "2018"
+edition = "2024"
 
 [dependencies]
-diesel = { version = "1.4.3", features = ["mysql", "chrono", "r2d2"] }
+async-trait = "0.1.77"                                                 # witchcraft to make async work in dyn trait objects
+diesel = { version = "2.2.6", features = ["mysql", "chrono", "r2d2"] }
 serde = { version = "1.0.103", features = ["derive"] }
 serde_json = "1.0.42"
-r2d2 = "0.8.7"
+tokio = { version = "1.35.1", features = ["full"] }
 
 webe_id = "0.1.1"
-webe_auth = { git = "ssh://git@github.com/WebeWizard/lib-webe.git" }
-webe_web = { git = "ssh://git@github.com/WebeWizard/lib-webe.git"}
-
-[replace]
-"diesel:1.4.3" = { git = "https://github.com/diesel-rs/diesel", features = ["mysql", "chrono", "r2d2"] }
-"diesel_derives:1.4.1" = { git = "https://github.com/diesel-rs/diesel" }
-
+webe_auth = { git = "https://github.com/WebeWizard/lib-webe" }
+webe_web = { git = "https://github.com/WebeWizard/lib-webe" }
+r2d2 = "0.8.10"
 
 [dev-dependencies]
-dotenv = "0.15.0"
